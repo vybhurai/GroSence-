@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Plus, Calendar, BadgeAlert, Sparkles, Filter, RefreshCw, Layers } from "lucide-react";
 import { motion } from "motion/react";
+import { safeFetch } from "../utils/api";
 
 export default function CalendarView() {
   const [events, setEvents] = useState<any[]>([]);
@@ -18,10 +19,8 @@ export default function CalendarView() {
   const fetchCalendar = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/calendar");
-      if (res.ok) {
-        setEvents(await res.json());
-      }
+      const data = await safeFetch("/api/calendar");
+      setEvents(data);
     } catch (e) {
       console.error("Calendar fetch error:", e);
     } finally {
@@ -52,23 +51,19 @@ export default function CalendarView() {
     };
 
     try {
-      const res = await fetch("/api/calendar", {
+      await safeFetch("/api/calendar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
-      if (res.ok) {
-        setSuccessWord("Calendar event scheduled! Demand models updated.");
-        setTitle("");
-        setEventDate("");
-        setIsHoliday(false);
-        fetchCalendar();
-      } else {
-        const data = await res.json();
-        setErrorWord(data.error || "Failed to schedule event.");
-      }
-    } catch (err) {
+      setSuccessWord("Calendar event scheduled! Demand models updated.");
+      setTitle("");
+      setEventDate("");
+      setIsHoliday(false);
+      fetchCalendar();
+    } catch (err: any) {
       console.error("Error creating promo entry:", err);
+      setErrorWord(err.message || "Failed to schedule event.");
     }
   };
 

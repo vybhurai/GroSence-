@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Search, ShoppingCart, Trash2, CreditCard, DollarSign, QrCode, Sparkles, CheckCircle, RefreshCw, Barcode, Printer, ArrowRight, UserPlus, Receipt, X } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { safeFetch } from "../utils/api";
 
 export default function BillingView() {
   const [products, setProducts] = useState<any[]>([]);
@@ -24,10 +25,8 @@ export default function BillingView() {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/products");
-      if (res.ok) {
-        setProducts(await res.json());
-      }
+      const data = await safeFetch("/api/products");
+      setProducts(data);
     } catch (e) {
       console.error("Billing panel product load failed:", e);
     } finally {
@@ -105,35 +104,29 @@ export default function BillingView() {
     };
 
     try {
-      const res = await fetch("/api/sales", {
+      const result = await safeFetch("/api/sales", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
 
-      if (res.ok) {
-        const result = await res.json();
-        setCheckoutResult({
-          invoiceId: result.transactions?.[0]?.id || `INV-${Date.now()}`,
-          date: new Date().toLocaleString(),
-          paymentMethod,
-          subtotal,
-          tax,
-          total: grandTotal,
-          items: [...cart],
-          cashReceived: paymentMethod === "cash" ? cashReceivedNum : grandTotal,
-          changeDue: paymentMethod === "cash" ? changeDue : 0
-        });
-        clearCart();
-        setCashReceived("");
-        setShowReceipt(true);
-      } else {
-        const data = await res.json();
-        alert(data.error || "POS sales processing failed");
-      }
-    } catch (err) {
+      setCheckoutResult({
+        invoiceId: result.transactions?.[0]?.id || `INV-${Date.now()}`,
+        date: new Date().toLocaleString(),
+        paymentMethod,
+        subtotal,
+        tax,
+        total: grandTotal,
+        items: [...cart],
+        cashReceived: paymentMethod === "cash" ? cashReceivedNum : grandTotal,
+        changeDue: paymentMethod === "cash" ? changeDue : 0
+      });
+      clearCart();
+      setCashReceived("");
+      setShowReceipt(true);
+    } catch (err: any) {
       console.error("Sales transaction failure:", err);
-      alert("Error logging the sale sequence.");
+      alert(err.message || "POS sales processing failed");
     } finally {
       setIsSubmitting(false);
     }

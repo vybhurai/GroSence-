@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Search, Plus, Filter, Edit3, Trash2, ArrowUpDown, ChevronDown, CheckCircle2, AlertTriangle, X, RefreshCw, Barcode } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { safeFetch } from "../utils/api";
 
 interface InventoryViewProps {
   onNavigateTo: (view: string) => void;
@@ -35,11 +36,8 @@ export default function InventoryView({ onNavigateTo }: InventoryViewProps) {
   const fetchInventory = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/inventory");
-      if (res.ok) {
-        const data = await res.json();
-        setItems(data);
-      }
+      const data = await safeFetch("/api/inventory");
+      setItems(data);
     } catch (e) {
       console.error("Failed to load inventory:", e);
     } finally {
@@ -89,17 +87,13 @@ export default function InventoryView({ onNavigateTo }: InventoryViewProps) {
     if (!confirm("Are you sure you want to completely remove this product and purge its sales history?")) return;
 
     try {
-      const res = await fetch(`/api/products/${productId}`, {
+      await safeFetch(`/api/products/${productId}`, {
         method: "DELETE",
       });
-      if (res.ok) {
-        fetchInventory();
-      } else {
-        const data = await res.json();
-        alert(data.error || "Failed to remove product");
-      }
-    } catch (err) {
+      fetchInventory();
+    } catch (err: any) {
       console.error("Purging product failed:", err);
+      alert(err.message || "Failed to remove product");
     }
   };
 
@@ -121,70 +115,61 @@ export default function InventoryView({ onNavigateTo }: InventoryViewProps) {
     };
 
     try {
-      let res;
       if (isEditing) {
         // Edit product info, then edit its inventory
-        res = await fetch(`/api/products/${formData.id}`, {
+        await safeFetch(`/api/products/${formData.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
 
-        if (res.ok) {
-          // Adjust count in inventory
-          const invItem = items.find(i => i.product_id === formData.id);
-          if (invItem) {
-            await fetch(`/api/inventory/${invItem.id}`, {
-              method: "PUT",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                quantity: payload.quantity,
-                reorder_level: payload.reorder_level
-              })
-            });
-          }
+        // Adjust count in inventory
+        const invItem = items.find(i => i.product_id === formData.id);
+        if (invItem) {
+          await safeFetch(`/api/inventory/${invItem.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              quantity: payload.quantity,
+              reorder_level: payload.reorder_level
+            })
+          });
         }
       } else {
         // Add completely new product
-        res = await fetch("/api/products", {
+        await safeFetch("/api/products", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
       }
 
-      if (res && res.ok) {
-        setShowModal(false);
-        fetchInventory();
-      } else {
-        const data = await res?.json();
-        setErrorMsg(data?.error || "Error recording product properties");
-      }
-    } catch (err) {
+      setShowModal(false);
+      fetchInventory();
+    } catch (err: any) {
       console.error("Error committing product:", err);
-      setErrorMsg("Networking error. Please try again.");
+      setErrorMsg(err.message || "Error recording product properties");
     }
   };
 
   const handleAdjustStock = async (productId: string, adjustment: number) => {
     try {
-      const res = await fetch("/api/inventory/adjust-by-product", {
+      await safeFetch("/api/inventory/adjust-by-product", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ product_id: productId, adjustment })
       });
-      if (res.ok) {
-        // Update local item quantity directly to maintain fast interface
-        setItems(prevItems =>
-          prevItems.map(item =>
-            item.product_id === productId
-              ? { ...item, quantity: Math.max(0, item.quantity + adjustment) }
-              : item
-          )
-        );
-      }
-    } catch (e) {
+      // Update local item quantity directly to maintain fast interface
+      setItems(prevItems =>
+        prevItems.map(item =>
+          item.product_id === productId
+            ? { ...item, quantity: Math.max(0, item.quantity + adjustment) }
+            : item
+        )
+      );
+    } catch (e: any) {
       console.error("Stock adjust failed:", e);
+      alert(e.message || "Failed to adjust stock count");
     }
   };
 

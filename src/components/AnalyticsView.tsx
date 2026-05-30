@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { DollarSign, Layers, Calendar, Trash2, ArrowUpDown, RefreshCw, AlertCircle, ShoppingBag, Receipt } from "lucide-react";
 import { motion } from "motion/react";
+import { safeFetch } from "../utils/api";
 
 export default function AnalyticsView() {
   const [salesLog, setSalesLog] = useState<any[]>([]);
@@ -10,12 +11,12 @@ export default function AnalyticsView() {
   const fetchLogsAndMetrics = async () => {
     setLoading(true);
     try {
-      const [resSales, resCats] = await Promise.all([
-        fetch("/api/sales"),
-        fetch("/api/analytics/category-analysis")
+      const [sales, categories] = await Promise.all([
+        safeFetch("/api/sales"),
+        safeFetch("/api/analytics/category-analysis")
       ]);
-      if (resSales.ok) setSalesLog(await resSales.json());
-      if (resCats.ok) setCats(await resCats.json());
+      setSalesLog(sales);
+      setCats(categories);
     } catch (e) {
       console.error("Failed fetching logs & analytics matrices:", e);
     } finally {
@@ -31,15 +32,11 @@ export default function AnalyticsView() {
     if (!confirm("Are you sure you want to void this sales receipt? This will refund items and add stock counts back onto shelf quantities.")) return;
 
     try {
-      const res = await fetch(`/api/sales/${saleId}`, { method: "DELETE" });
-      if (res.ok) {
-        fetchLogsAndMetrics();
-      } else {
-        const data = await res.json();
-        alert(data.error || "Voiding transaction failed");
-      }
-    } catch (err) {
+      await safeFetch(`/api/sales/${saleId}`, { method: "DELETE" });
+      fetchLogsAndMetrics();
+    } catch (err: any) {
       console.error("Failed executing refund void:", err);
+      alert(err.message || "Voiding transaction failed");
     }
   };
 

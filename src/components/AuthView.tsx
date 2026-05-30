@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Mail, Lock, User, Sparkles, TrendingUp, BarChart4, ChevronRight, LogIn, ShoppingBag } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { safeFetch } from "../utils/api";
 
 interface AuthViewProps {
   onAuthSuccess: (token: string, user: { id: string; name: string; email: string }) => void;
@@ -45,15 +46,11 @@ export default function AuthView({ onAuthSuccess }: AuthViewProps) {
     const payload = isLogin ? { email, password } : { name, email, password };
 
     try {
-      const res = await fetch(endpoint, {
+      const data = await safeFetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Authentication failed");
-      }
       onAuthSuccess(data.token, data.user);
     } catch (err: any) {
       setError(err.message || "Something went wrong.");

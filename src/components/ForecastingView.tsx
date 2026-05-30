@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Sparkles, TrendingUp, HelpCircle, Layers, Calendar, ChevronRight, RefreshCw, AlertTriangle, ArrowRight, Zap } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { safeFetch } from "../utils/api";
 
 export default function ForecastingView() {
   const [predictions, setPredictions] = useState<any[]>([]);
@@ -15,13 +16,10 @@ export default function ForecastingView() {
   const fetchForecasts = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/predictions/latest");
-      if (res.ok) {
-        const data = await res.json();
-        setPredictions(data);
-        if (data.length > 0) {
-          setSelectedProduct(data[0]);
-        }
+      const data = await safeFetch("/api/predictions/latest");
+      setPredictions(data);
+      if (data.length > 0) {
+        setSelectedProduct(data[0]);
       }
     } catch (e) {
       console.error("Error fetching predictions ledger:", e);
@@ -56,24 +54,19 @@ export default function ForecastingView() {
     }, 1200);
 
     try {
-      const res = await fetch("/api/predictions/gemini-recommendations", {
+      const data = await safeFetch("/api/predictions/gemini-recommendations", {
         method: "POST"
       });
-      const data = await res.json();
       clearInterval(timer);
-
-      if (res.ok) {
-        setAiRecommendations(data);
-      } else {
-        // Fallback handled nicely if API Key is not set yet
-        if (data.fallbackRecommendations) {
-          setAiRecommendations(data.fallbackRecommendations);
-        } else {
-          alert(data.error || "Replenishment advice fetch failed");
-        }
-      }
-    } catch (err) {
+      setAiRecommendations(data);
+    } catch (err: any) {
       console.error("AI recommendations failed:", err);
+      const fallback = err.responseJson?.fallbackRecommendations;
+      if (fallback) {
+        setAiRecommendations(fallback);
+      } else {
+        alert(err.message || "Replenishment advice fetch failed");
+      }
     } finally {
       clearInterval(timer);
       setAiLoading(false);
