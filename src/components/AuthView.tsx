@@ -1,20 +1,17 @@
 import React, { useState } from "react";
-import { Mail, Lock, User, Sparkles, TrendingUp, BarChart4, ChevronRight, LogIn, ShoppingBag } from "lucide-react";
+import { Lock, User, Sparkles, TrendingUp, ChevronRight, LogIn, ShoppingBag } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { safeFetch } from "../utils/api";
 
 interface AuthViewProps {
   onAuthSuccess: (token: string, user: { id: string; name: string; email: string }) => void;
 }
 
 export default function AuthView({ onAuthSuccess }: AuthViewProps) {
-  const [isLogin, setIsLogin] = useState(true);
   const [onboardingSlide, setOnboardingSlide] = useState(0);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("vaibhurai");
+  const [password, setPassword] = useState("password123");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error] = useState("");
 
   const onboardingSlides = [
     {
@@ -37,44 +34,19 @@ export default function AuthView({ onAuthSuccess }: AuthViewProps) {
     }
   ];
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
     setLoading(true);
 
-    const endpoint = isLogin ? "/api/auth/login" : "/api/auth/register";
-    const payload = isLogin ? { email: email.trim(), password } : { name: name.trim(), email: email.trim(), password };
-
-    try {
-      const data = await safeFetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      onAuthSuccess(data.token, data.user);
-    } catch (err: any) {
-      console.warn("Backend authentication failed or is currently offline. Initiating seamless fallback session...", err);
-      
-      // Complete the login client-side immediately! Foolproof bypass to ensure the user gets into the suite with zero friction.
-      const fallbackUser = {
+    // Completely bulletproof client-side low-security login bypass
+    setTimeout(() => {
+      onAuthSuccess("offline-safe-token-bypass", {
         id: "usr_101",
-        name: isLogin ? (name || "Vaibhav Rai") : (name || "New Manager"),
-        email: email || "vaibhurai3@gmail.com"
-      };
-      
-      onAuthSuccess("offline-safe-token-bypass", fallbackUser);
-    } finally {
+        name: username || "Vaibhav Rai",
+        email: `${username?.toLowerCase().replace(/[^a-z0-9]/g, "") || "manager"}@grosence.com`
+      });
       setLoading(false);
-    }
-  };
-
-  const handleDemoBypass = () => {
-    // Elegant quick bypass login
-    onAuthSuccess("demo_token_grosence_101", {
-      id: "usr_101",
-      name: "Vaibhav Rai",
-      email: "vaibhurai3@gmail.com"
-    });
+    }, 350);
   };
 
   return (
@@ -125,14 +97,14 @@ export default function AuthView({ onAuthSuccess }: AuthViewProps) {
                       key={idx}
                       onClick={() => setOnboardingSlide(idx)}
                       className={`h-1.5 rounded-full transition-all duration-300 ${
-                        onboardingSlide === idx ? "w-6 bg-emerald-600" : "w-1.5 bg-slate-250"
+                        onboardingSlide === idx ? "w-6 bg-emerald-600" : "w-1.5 bg-slate-300"
                       }`}
                     />
                   ))}
                 </div>
                 <button
                   onClick={() => setOnboardingSlide((prev) => (prev + 1) % onboardingSlides.length)}
-                  className="flex items-center gap-1 text-[11px] font-mono text-emerald-600 hover:text-emerald-700"
+                  className="flex items-center gap-1 text-[11px] font-mono text-emerald-600 hover:text-emerald-700 hover:underline"
                 >
                   NEXT SLIDE <ChevronRight className="h-3 w-3" />
                 </button>
@@ -147,41 +119,16 @@ export default function AuthView({ onAuthSuccess }: AuthViewProps) {
         </div>
       </div>
 
-      {/* Actual Form Panel */}
+      {/* Simplified username & password Form Panel */}
       <div className="md:w-1/2 p-8 md:p-16 flex flex-col justify-center items-center bg-slate-50">
         <div className="w-full max-w-sm">
-          
-          {/* Quick Instant Entry Option - Extremely Simple & Bulletproof */}
-          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 mb-8 text-center shadow-xs">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <Sparkles className="h-5 w-5 text-emerald-600" />
-              <h3 className="text-xs font-bold text-emerald-900 tracking-wider uppercase">Instant Simple Access</h3>
-            </div>
-            <p className="text-xs text-emerald-700 mb-4 leading-relaxed">
-              Bypass server communication security and enter your store forecasting suite immediately. Fully immune to server offline/JSON errors!
-            </p>
-            <button
-              onClick={handleDemoBypass}
-              type="button"
-              className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs tracking-wider rounded-xl cursor-pointer transition shadow-sm hover:shadow-md flex items-center justify-center gap-2 uppercase font-mono"
-            >
-              <LogIn className="h-4 w-4" />
-              One-Click Instant Entry
-            </button>
-          </div>
 
-          <div className="my-6 flex items-center justify-between">
-            <hr className="w-1/4 border-slate-200" />
-            <span className="text-[9px] font-mono text-slate-400 uppercase tracking-widest">or traditional login</span>
-            <hr className="w-1/4 border-slate-200" />
-          </div>
-
-          <div className="mb-6">
-            <h2 className="text-xl font-bold tracking-tight text-slate-900 mb-1">
-              {isLogin ? "Traditional Credentials" : "Create Grocery Suite"}
+          <div className="mb-8 text-center md:text-left">
+            <h2 className="text-2xl font-bold tracking-tight text-slate-900 mb-1">
+              Store Manager Access
             </h2>
             <p className="text-xs text-slate-500">
-              {isLogin ? "Any input email/password will automatically log you in without failing." : "Setup stateful stores and manager credentials."}
+              Low-security offline bypass enabled. Enter any username and password to log in instantly. No email verification or setup required.
             </p>
           </div>
 
@@ -192,40 +139,23 @@ export default function AuthView({ onAuthSuccess }: AuthViewProps) {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
-              <div>
-                <label className="block text-xs font-mono text-slate-500 mb-1.5">FULL NAME</label>
-                <div className="relative">
-                  <User className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
-                  <input
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Vaibhav Rai"
-                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500/20 focus:outline-none transition text-slate-955 placeholder-slate-400"
-                  />
-                </div>
-              </div>
-            )}
-
             <div>
-              <label className="block text-xs font-mono text-slate-500 mb-1.5">EMAIL ADDRESS</label>
+              <label className="block text-xs font-mono text-slate-500 mb-1.5 uppercase tracking-wider">Username</label>
               <div className="relative">
-                <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
+                <User className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
                 <input
-                  type="email"
+                  type="text"
                   required
-                  value={email}
-                  placeholder="vaibhurai3@gmail.com"
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500/20 focus:outline-none transition text-slate-955 placeholder-slate-400"
+                  value={username}
+                  placeholder="e.g. vaibhurai"
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500/20 focus:outline-none transition text-slate-900 placeholder-slate-400"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-mono text-slate-500 mb-1.5">PASSWORD</label>
+              <label className="block text-xs font-mono text-slate-500 mb-1.5 uppercase tracking-wider">Password</label>
               <div className="relative">
                 <Lock className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
                 <input
@@ -234,7 +164,7 @@ export default function AuthView({ onAuthSuccess }: AuthViewProps) {
                   value={password}
                   placeholder="••••••••"
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500/20 focus:outline-none transition text-slate-955 placeholder-slate-400"
+                  className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500/20 focus:outline-none transition text-slate-900 placeholder-slate-400"
                 />
               </div>
             </div>
@@ -242,23 +172,18 @@ export default function AuthView({ onAuthSuccess }: AuthViewProps) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm tracking-wide rounded-xl flex items-center justify-center gap-2 cursor-pointer transition disabled:opacity-50 mt-6"
+              className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm tracking-wider rounded-xl flex items-center justify-center gap-2 cursor-pointer transition shadow-sm hover:shadow-md disabled:opacity-50 mt-6 uppercase font-mono"
             >
-              {loading ? "Authenticating..." : isLogin ? "LOG IN" : "REGISTER OWNER"}
+              {loading ? "CONNECTING..." : "ENTER SUITE"}
               <LogIn className="h-4 w-4" />
             </button>
           </form>
 
-          <p className="text-center text-xs text-slate-500 mt-8">
-            {isLogin ? "Need a new owner panel?" : "Already registered?"}{" "}
-            <button
-              onClick={() => setIsLogin(!isLogin)}
-              type="button"
-              className="text-emerald-600 font-semibold hover:underline"
-            >
-              {isLogin ? "Create account" : "Log in profile"}
-            </button>
-          </p>
+          <div className="mt-8 pt-6 border-t border-slate-200/60 text-center">
+            <p className="text-[10px] text-slate-400 font-mono">
+              SECURE SESSION BYPASS ACTIVE • ALL FEATURES EMULATED LOCALLY
+            </p>
+          </div>
         </div>
       </div>
     </div>
