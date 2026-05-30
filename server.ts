@@ -4,7 +4,15 @@ import fs from "fs";
 import crypto from "crypto";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
+import dotenv from "dotenv";
 import { DatabaseState, User, Shop, Product, InventoryItem, Sale, CalendarEvent, Prediction } from "./src/types";
+
+// Load environment variables (with fallback to .env.example)
+dotenv.config();
+const envExamplePath = path.join(process.cwd(), ".env.example");
+if (fs.existsSync(envExamplePath)) {
+  dotenv.config({ path: envExamplePath });
+}
 
 // Setup server & port
 const app = express();
@@ -12,18 +20,27 @@ const PORT = 3000;
 
 app.use(express.json());
 
-// Initialize Gemini Client
-const apiKey = process.env.GEMINI_API_KEY;
-let ai: GoogleGenAI | null = null;
-if (apiKey) {
-  ai = new GoogleGenAI({
-    apiKey: apiKey,
-    httpOptions: {
-      headers: {
-        'User-Agent': 'aistudio-build',
+// Lazy-loaded Gemini client setup
+let cachedKey: string | undefined = undefined;
+let aiInstance: GoogleGenAI | null = null;
+
+function getGeminiClient(): GoogleGenAI | null {
+  const currentKey = process.env.GEMINI_API_KEY;
+  if (!currentKey) {
+    return null;
+  }
+  if (!aiInstance || cachedKey !== currentKey) {
+    cachedKey = currentKey;
+    aiInstance = new GoogleGenAI({
+      apiKey: currentKey,
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
+        }
       }
-    }
-  });
+    });
+  }
+  return aiInstance;
 }
 
 // Durable JSON storage path
@@ -857,9 +874,10 @@ app.get("/api/analytics/category-analysis", (req, res) => {
    ========================================================================== */
 
 app.post("/api/predictions/gemini-recommendations", async (req, res) => {
+  const ai = getGeminiClient();
   if (!ai) {
     return res.status(503).json({
-      error: "Gemini API key is not configured in Settings > Secrets. Complete steps to obtain strategic demand suggestions.",
+      error: "Gemini API key is not configured in Settings > Secrets or .env.example. Complete steps to obtain strategic demand suggestions.",
       fallbackRecommendations: [
         { product_id: "prod_3", advice: "Stock depleted down to 8 units. Predicted demand over 7 days is 60+ loaves on bread category due to short shelf life. Reorder 65 units immediately.", urgency: "critical" },
         { product_id: "prod_7", advice: "Yogurt stock stands at 5 units. Reorder limit is 10 units. Demand expected at 45 units over 14 days. Reorder 40 units.", urgency: "high" }
@@ -936,28 +954,32 @@ Only return valid JSON inside a standard json code block. Do not write introduct
    VITE DEV SERVER OR STATIC ASSETS
    ========================================================================== */
 
-if (process.env.NODE_ENV !== "production") {
-  // Connect Vite for unified development
-  createViteServer({
-    server: { middlewareMode: true },
-    appType: "spa"
-  }).then((vite) => {
-    app.use(vite.middlewares);
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log(`GroSence full-stack server booted on port ${PORT} [Development Mode]`);
+async function startServer() {
+  if (process.env.NODE_ENV !== "production") {
+    // Connect Vite for unified development
+    try {
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: "spa"
+      });
+      app.use(vite.middlewares);
+      console.log("Attached Vite development middleware.");
+    } catch (err) {
+      console.error("Failed to start Vite middleware server", err);
+    }
+  } else {
+    // Built files serving for production deployment
+    const distPath = path.join(process.cwd(), "dist");
+    app.use(express.static(distPath));
+    app.get("*", (req, res) => {
+      res.sendFile(path.join(distPath, "index.html"));
     });
-  }).catch((err) => {
-    console.error("Failed to start Vite middleware server", err);
-  });
-} else {
-  // Built files serving for production deployment
-  const distPath = path.join(process.cwd(), "dist");
-  app.use(express.static(distPath));
-  app.get("*", (req, res) => {
-    res.sendFile(path.join(distPath, "index.html"));
-  });
+  }
 
+  // Start listening after all setup is fully complete
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`GroSence full-stack server running on port ${PORT} [Production Mode]`);
+    console.log(`GroSence full-stack server booted on port ${PORT}`);
   });
 }
+
+startServer();
