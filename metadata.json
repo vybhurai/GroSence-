@@ -1,0 +1,6 @@
+{
+  "name": "GroSence Prediction System",
+  "description": "Smart Grocery Sales, Billing, and stock demand forecasting system with ML analytics and holiday tracking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
